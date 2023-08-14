@@ -21,6 +21,10 @@ services:
     #  LOCALSTACK_API_KEY:
     #    from_secret: localstack_api_key
 
+volumes:
+  - name: ci
+    temp: {}
+
 environment:
   AWS_ACCESS_KEY_ID: test
   AWS_SECRET_ACCESS_KEY: test
@@ -30,12 +34,19 @@ steps:
   - name: init
     image: alpine/curl:3.14
     pull: if-not-exist
+    volumes:
+      - name: ci
+        path: /providers.tf
     commands:
       - until curl -s http://localstack:4566/_localstack/health; do echo -n . && sleep 1; done
+      - sed -i 's/localhost/localstack/g' providers.tf
 
   - name: deploy
     image: hashicorp/terraform:1.5.3
     pull: if-not-exist
+    volumes:
+      - name: ci
+        path: /providers.tf
     commands:
       - terraform fmt
       - terraform init -backend=false -upgrade -lock=false
