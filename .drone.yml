@@ -1,7 +1,7 @@
 ---
 kind: pipeline
 type: docker
-name: localstack
+name: localstack-ci
 
 trigger:
   event:
@@ -24,12 +24,12 @@ environment:
   AWS_DEFAULT_REGION: eu-west-1
 
 steps:
-  - name: localstack wait
+  - name: init
     image: alpine/curl:3.14
     commands:
       - until curl -s http://localstack:4566/_localstack/health; do echo -n . && sleep 1; done
 
-  - name: localstack wait
+  - name: deploy
     image: hashicorp/terraform:1.5.3
     commands:
       - terraform fmt
@@ -38,13 +38,13 @@ steps:
       - terraform plan -lock=false -input=false -var-file fixtures.tfvars
       - terraform apply -input=true -auto-approve
   
-  - name: localstack wait
+  - name: tf show
     image: hashicorp/terraform:1.5.3
     commands:
       - terraform state list
       - terraform show
 
-  - name: localstack wait
+  - name: integration test
     image: amazon/aws-cli
     commands:
       - --endpoint-url=http://localstack:4566 s3 ls
