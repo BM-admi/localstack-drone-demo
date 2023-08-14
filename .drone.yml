@@ -26,10 +26,6 @@ environment:
   AWS_SECRET_ACCESS_KEY: test
   AWS_DEFAULT_REGION: eu-west-1
 
-volumes:
-  - name: ci
-    temp: {}
-
 steps:
   - name: init
     image: alpine/curl:3.14
@@ -40,9 +36,6 @@ steps:
   - name: deploy
     image: hashicorp/terraform:1.5.3
     pull: if-not-exist
-    volumes:
-      - name: ci
-        path: /
     commands:
       - terraform fmt
       - terraform init -backend=false -upgrade -lock=false
