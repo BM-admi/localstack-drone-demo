@@ -1,0 +1,51 @@
+---
+kind: pipeline
+type: docker
+name: localstack
+
+trigger:
+  event:
+    - push
+    - pull_request
+    - custom
+  branch:
+    - main
+
+services:
+  - name: localstack
+    image: localstack/localstack
+    #environment:
+    #  LOCALSTACK_API_KEY:
+    #    from_secret: localstack_api_key
+
+environment:
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  AWS_DEFAULT_REGION: eu-west-1
+
+steps:
+  - name: localstack wait
+    image: alpine/curl:3.14
+    commands:
+      - until curl -s http://localstack:4566/_localstack/health; do echo -n . && sleep 1; done
+
+  - name: localstack wait
+    image: hashicorp/terraform:1.5.3
+    commands:
+      - terraform fmt
+      - terraform init -backend=false -upgrade -lock=false
+      - terraform validate
+      - terraform plan -lock=false -input=false -var-file fixtures.tfvars
+      - terraform apply -input=true -auto-approve
+  
+  - name: localstack wait
+    image: hashicorp/terraform:1.5.3
+    commands:
+      - terraform state list
+      - terraform show
+
+  - name: localstack wait
+    image: amazon/aws-cli
+    commands:
+      - --endpoint-url=http://localstack:4566 s3 ls
+
